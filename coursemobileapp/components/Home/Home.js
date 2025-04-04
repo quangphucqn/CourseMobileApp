@@ -1,49 +1,58 @@
-import { ActivityIndicator, FlatList, Image, Text, TouchableOpacity, View } from "react-native";
-import MyStyles from "../../styles/MyStyles";
-import { useEffect, useState } from "react";
-import { Chip, List, Searchbar } from "react-native-paper";
+import { useEffect, useState } from "react"
 import Apis, { endpoints } from "../../configs/Apis";
-import { useNavigation } from "@react-navigation/native";
+import { FlatList, View, Image, TouchableOpacity } from "react-native";
+import MyStyles from "../../styles/MyStyles";
+import { ActivityIndicator, Chip, List, Searchbar } from "react-native-paper";
+import { Text } from 'react-native';
+import { SafeAreaView } from "react-native-safe-area-context";
+
 
 const Home = () => {
     const [categories, setCategories] = useState([]);
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [q, setQ] = useState();
     const [page, setPage] = useState(1);
     const [cateId, setCateId] = useState(null);
-    const [kw, setKw] = useState("");
-    const nav = useNavigation();
+
 
     const loadCates = async () => {
-        let res = await Apis.get(endpoints['categories']);
+        let res = await Apis.get(endpoints['categories'])
         setCategories(res.data);
     }
 
     const loadCourses = async () => {
         if (page > 0) {
             try {
-                setLoading(true);
+                setLoading(true)
 
                 let url = `${endpoints['courses']}?page=${page}`;
-                if (kw) {
-                    url = `${url}&q=${kw}`;
+
+                if (q) {
+                    url = `${url}&q=${q}`;
                 }
 
                 if (cateId) {
-                    url = `${url}&category_id=${cateId}`;
+                    url = `${url}&category_id=${q}`
                 }
 
-                let res = await Apis.get(url);
 
+                let res = await Apis.get(url)
                 setCourses([...courses, ...res.data.results]);
-                if (res.data.next === null)
+
+                if (res.next === null)
                     setPage(0);
             } catch {
 
             } finally {
-                setLoading(false);
+                setLoading(false)
             }
         }
+    }
+
+    const loadMore = () => {
+        if (!loading && page > 0)
+            setPage(page + 1)
     }
 
     useEffect(() => {
@@ -56,40 +65,30 @@ const Home = () => {
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [kw, page, cateId]);
-
-    const loadMore = () => {
-        if (!loading && page > 0)
-            setPage(page + 1);
-    }
-
-    const search = (value, callback) => {
-        setPage(1);
-        setCourses([]);
-        callback(value);
-    }
+    }, [q, page, cateId]);
 
     return (
-        <View style={MyStyles.container}>
-            <Text style={MyStyles.subject}>E-COURSE ONLINE</Text>
+        <SafeAreaView style={[MyStyles.container, MyStyles.p]}>
+            <Text style={MyStyles.subject}>DANH SACH KHOA HOC</Text>
 
             <View style={[MyStyles.row, MyStyles.wrap]}>
-            <TouchableOpacity onPress={() => search(null, setCateId)}>
-                <Chip style={MyStyles.m}  icon="label">Tất cả</Chip>
-            </TouchableOpacity>
+                <TouchableOpacity onPress={() => setCateId(null)}>
+                    <Chip icon="label" style={MyStyles.m}>All</Chip>
+                </TouchableOpacity>
 
-            {categories.map(c => <TouchableOpacity key={c.id} onPress={() => search(c.id, setCateId)}>
-                <Chip style={MyStyles.m}  icon="label">{c.name}</Chip>
-            </TouchableOpacity>)}
+                {categories.map(c => <TouchableOpacity key={c.id} onPress={() => setCateId(c.id)}>
+                    <Chip icon="label" style={MyStyles.m}>{c.name}</Chip>
+                </TouchableOpacity>)}
             </View>
 
-            <Searchbar placeholder="Tìm kiếm khóa học.." onChangeText={t => search(t, setKw)} value={kw} />
+            <Searchbar
+                placeholder="Search"
+                onChangeText={setQ}
+                value={q}
+            />
 
-            
-            <FlatList ListFooterComponent={loading && <ActivityIndicator />} onEndReached={loadMore} data={courses} 
-                renderItem={({item}) => <List.Item key={item.id} title={item.subject} description={item.created_date} 
-                                                   left={() => <TouchableOpacity onPress={() => nav.navigate("lesson", {"courseId": item.id})}><Image style={MyStyles.avatar} source={{uri: item.image}} /></TouchableOpacity>} />} />
-        </View>
+            <FlatList onEndReached={loadMore} ListFooterComponent={loading && <ActivityIndicator />} data={courses} renderItem={({ item }) => <List.Item title={item.subject} description={item.created_date} left={() => <Image style={MyStyles.avatar} source={{ uri: item.image }} />} />} />
+        </SafeAreaView>
     );
 }
 
